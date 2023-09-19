@@ -1,0 +1,29 @@
+.container {
+    // border: 1px solid #f00;
+
+    form {
+        padding: 15px;
+
+        input[type="text"],
+        input[type="password"] {
+            height: 30px;
+            width: 280px;
+            padding-left: 10px;
+            display: block;
+            margin-top: 15px;
+        }
+
+        .response {
+            margin-top: 15px;
+            color: blue;
+            height: 15px;
+        }
+
+        input[type="submit"] {
+            height: 30px;
+            width: 100px;
+            display: inline-block;
+            margin-top: 15px;
+        }
+    }
+}

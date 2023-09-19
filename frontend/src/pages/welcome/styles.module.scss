@@ -1,0 +1,39 @@
+*,
+::before,
+::after {
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.container {
+    // border: 1px solid #f00;
+
+    .files {
+        table {
+            width: 100%;
+
+            thead {
+                tr {
+                    th {
+                        background-color: #000;
+                        color: #fff;
+                        padding: 15px;
+                    }
+                }
+            }
+            tbody {
+                tr {
+                    td {
+                        text-align: center;
+                        padding: 15px;
+                    }
+                }
+                tr:nth-child(odd) {
+                    background-color: aliceblue;
+                }
+            }
+        }
+    }
+}

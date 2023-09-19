@@ -1,0 +1,78 @@
+*,
+::before,
+::after {
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.container {
+    // border: 1px solid #f00;
+
+    .userContent {
+        padding: 15px;
+
+        .uploadFile {
+            margin-top: 15px;
+
+            .uploadSubmit {
+                display: block;
+                margin-top: 15px;
+                padding-left: 15px;
+                padding-right: 15px;
+            }
+        }
+
+        .files {
+            table {
+                margin-top: 15px;
+                // table-layout: fixed;
+                width: 100%;
+
+                thead {
+                    tr {
+                        th {
+                            padding: 5px;
+                            background-color: #000;
+                            color: #fff;
+                        }
+                    }
+                }
+                tbody {
+                    tr {
+                        td {
+                            padding: 5px;
+                            text-align: center;
+
+                            button.delete,
+                            button.download {
+                                padding: 5px;
+                                padding-left: 15px;
+                                padding-right: 15px;
+                                border: none;
+                                font-weight: bolder;
+                                border-radius: 3px;
+
+                                &:hover {
+                                    font-style: italic;
+                                }
+                            }
+                            button.download {
+                                background-color: #00f;
+                                color: #fff;
+                            }
+                            button.delete {
+                                background-color: #f00;
+                                color: #fff;
+                            }
+                        }
+                    }
+                    tr:nth-child(odd) {
+                        background-color: aliceblue;
+                    }
+                }
+            }
+        }
+    }
+}

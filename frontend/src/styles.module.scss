@@ -1,0 +1,40 @@
+*,
+::before,
+::after {
+    padding: 0;
+    margin: 0;
+    font-size: 12px;
+    font-family: Verdana, Geneva, Tahoma, sans-serif;
+}
+
+.container {
+    // border: 1px solid #f00;
+
+    .headerContainer {
+        display: flex;
+        justify-content: space-between;
+        align-items: stretch;
+        background-color: #333;
+        height: 50px;
+
+        .appName {
+            padding-left: 15px;
+            padding-right: 15px;
+            color: #fff;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+
+        .navLinksContainer {
+            display: flex;
+            align-items: center;
+
+            .navLink {
+                padding: 15px;
+                color: #fff;
+                text-decoration: none;
+            }
+        }
+    }
+}
