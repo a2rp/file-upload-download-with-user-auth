@@ -1,116 +1,172 @@
-const FileModel = require("../models/file.model");
-const path = require("path");
+const crypto = require("crypto");
 const fs = require("fs");
+const path = require("path");
+const mongoose = require("mongoose");
+const FileModel = require("../models/file.model");
+
+const ownerFilter = (user) => ({
+    $or: [
+        { ownerId: user._id },
+        { ownerId: { $exists: false }, user: user.username },
+    ],
+});
+
+const resolveStoredPath = (storedPath) => {
+    if (path.isAbsolute(storedPath)) {
+        return storedPath;
+    }
+
+    return path.resolve(__dirname, "../../", storedPath.replace(/[\\/]/g, path.sep));
+};
+
+const fileResponse = (file) => ({
+    id: file._id,
+    originalName: file.originalName || path.basename(String(file.file).replace(/\\/g, "/")),
+    code: file.code,
+    createdAt: file.createdAt,
+});
+
+const hasValidFileSignature = async (file) => {
+    const handle = await fs.promises.open(file.path, "r");
+    try {
+        const buffer = Buffer.alloc(1024);
+        const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
+        const content = buffer.subarray(0, bytesRead);
+
+        if (file.mimetype === "image/jpeg") {
+            return content.length >= 3 && content[0] === 0xff && content[1] === 0xd8 && content[2] === 0xff;
+        }
+        if (file.mimetype === "image/png") {
+            return content.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+        }
+        if (file.mimetype === "application/pdf") {
+            return content.includes(Buffer.from("%PDF-"));
+        }
+
+        return false;
+    } finally {
+        await handle.close();
+    }
+};
 
 const uploadFile = async (req, res, next) => {
-    try {
-        console.log(req.body);
-        const user = req.body.id;
-        const code = req.body.name;
+    if (!req.file) {
+        return res.status(400).json({ success: false, message: "Choose a supported file to upload." });
+    }
 
-        const file = req.file.path;
-        const response = await FileModel.create({ user, code, file });
-        res.status(200).json({ response });
+    try {
+        if (!await hasValidFileSignature(req.file)) {
+            await fs.promises.unlink(req.file.path);
+            return res.status(400).json({ success: false, message: "The file content does not match its declared type." });
+        }
+
+        const file = await FileModel.create({
+            user: req.user.username,
+            ownerId: req.user._id,
+            originalName: req.file.originalname,
+            code: crypto.randomBytes(24).toString("hex"),
+            file: req.file.path,
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: "File uploaded successfully.",
+            file: fileResponse(file),
+        });
     } catch (error) {
-        console.log(error);
-        return res.json({ success: false, message: error.message });
+        try {
+            await fs.promises.unlink(req.file.path);
+        } catch (cleanupError) {
+            if (cleanupError.code !== "ENOENT") {
+                console.error("Could not remove an upload after its database write failed:", cleanupError);
+            }
+        }
+
+        return next(error);
     }
 };
 
 const getFiles = async (req, res, next) => {
-    const username = req.body.user;
     try {
-        const files = await FileModel.find({ user: username });
-        res.status(200).json({ files });
-    } catch (error) {
-        console.error(error);
-    }
-};
+        const files = await FileModel.find(ownerFilter(req.user)).sort({ createdAt: -1 });
 
-const downloadFile = async (req, res, next) => {
-    const { id } = req.params;
-    const item = await FileModel.findById(id);
-    if (!item) {
-        return next(new Error("Item not found"));
-    }
-    console.log(item);
-
-    const theFile = item.file;
-    console.log(theFile);
-    const filePath = path.join(__dirname, `../../${theFile}`);
-    res.download(filePath);
-};
-
-const deleteFile = async (req, res) => {
-    const { id } = req.params;
-    const item = await FileModel.findById(id);
-    if (!item) {
-        return next(new Error("Item not found"));
-    }
-    const fileLocation = path.join(__dirname, `../../${item.file}`);
-    fs.unlink(fileLocation, (err) => {
-        if (err) {
-            return res.status(500).send({
-                message: "Could not delete the file. " + err,
-            });
+        for (const file of files) {
+            const hasSecureShareCode = /^[a-f0-9]{48}$/.test(file.code);
+            if (!file.ownerId || !hasSecureShareCode) {
+                file.ownerId = req.user._id;
+                file.user = req.user.username;
+                if (!hasSecureShareCode) {
+                    file.code = crypto.randomBytes(24).toString("hex");
+                }
+                await file.save();
+            }
         }
 
-        FileModel.findOneAndRemove({ _id: id }).then(() => {
-            return res.status(200).send({
-                success: true,
-                message: "File is deleted.",
-            });
-        }).catch(error => {
-            return res.status(500).send({
-                message: error,
-            });
-        });
-    });
+        return res.status(200).json({ success: true, files: files.map(fileResponse) });
+    } catch (error) {
+        return next(error);
+    }
 };
 
-const getAllFiles = async (req, res) => {
+const deleteFile = async (req, res, next) => {
     try {
-        const files = await FileModel.find();
-        // console.log(files);
-        res.status(200).json({ files });
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(404).json({ success: false, message: "File not found." });
+        }
+
+        const file = await FileModel.findOne({ _id: req.params.id, ...ownerFilter(req.user) });
+        if (!file) {
+            return res.status(404).json({ success: false, message: "File not found." });
+        }
+
+        const filePath = resolveStoredPath(file.file);
+        try {
+            await fs.promises.unlink(filePath);
+        } catch (error) {
+            if (error.code !== "ENOENT") {
+                return next(error);
+            }
+        }
+
+        await FileModel.deleteOne({ _id: file._id });
+        return res.status(200).json({ success: true, message: "File deleted successfully." });
     } catch (error) {
-        console.error(error);
-        res.send({ message: error });
+        return next(error);
     }
 };
 
 const urlDownload = async (req, res, next) => {
-    const { id, code } = req.params;
-    console.log(id, code);
+    const { id } = req.params;
+    const code = typeof req.body?.code === "string" ? req.body.code.trim() : "";
+
+    if (!mongoose.Types.ObjectId.isValid(id) || !/^[a-f0-9]{48}$/.test(code)) {
+        return res.status(404).json({ success: false, message: "File not found." });
+    }
 
     try {
-        const item = await FileModel.find({ $and: [{ _id: id }, { code: code }] });
-        console.log(item, "item");
-        if (!item || item.length === 0) {
-            return res.json({
-                success: false,
-                message: "File not found"
-            });
+        const file = await FileModel.findOne({ _id: id, code });
+        if (!file) {
+            return res.status(404).json({ success: false, message: "File not found." });
         }
 
-        const thePath = item[0].file;
-        console.log("thePath", thePath);
-        const file = path.join(__dirname, `../../${thePath}`);
-        res.download(file);
-    } catch (error) {
-        console.log(error);
-        return res.json({
-            success: false,
-            message: "Error: File not found"
+        const filePath = resolveStoredPath(file.file);
+        try {
+            await fs.promises.access(filePath);
+        } catch (error) {
+            if (error.code === "ENOENT") {
+                return res.status(404).json({ success: false, message: "File not found." });
+            }
+            return next(error);
+        }
+
+        return res.download(filePath, file.originalName || path.basename(filePath), (error) => {
+            if (error) {
+                next(error);
+            }
         });
+    } catch (error) {
+        return next(error);
     }
 };
 
-module.exports = {
-    uploadFile,
-    getFiles,
-    deleteFile,
-    getAllFiles,
-    urlDownload
-};
-
+module.exports = { uploadFile, getFiles, deleteFile, urlDownload };

@@ -1,84 +1,69 @@
-import React, { useEffect, useRef, useState } from "react";
-import styles from "./styles.module.scss";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import styles from "./styles.module.scss";
 
-const Regsiter = () => {
-    const navigate = useNavigate(null);
-    const submitButton = useRef(null);
+const Register = () => {
+    const navigate = useNavigate();
+    const [inputs, setInputs] = useState({ username: "", password: "", confirmPassword: "" });
+    const [message, setMessage] = useState("");
+    const [submitting, setSubmitting] = useState(false);
 
-    const [inputs, setInputs] = useState({
-        username: "",
-        password: "",
-        confirmPassword: ""
-    });
-    const [response, setResponse] = useState("");
+    useEffect(() => {
+        if (window.localStorage.getItem("token")) {
+            navigate("/dashboard", { replace: true });
+        }
+    }, [navigate]);
 
-    const handleSubmit = (event) => {
+    const handleChange = (event) => {
+        setInputs((current) => ({ ...current, [event.target.name]: event.target.value }));
+    };
+
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        // console.log(inputs);
+        const username = inputs.username.trim();
 
-        if (inputs.username.trim().length < 3 || inputs.username.trim().length > 15) {
-            setResponse("Username length must >=3 and <=15");
+        if (username.length < 3 || username.length > 15) {
+            setMessage("Username must be 3 to 15 characters.");
             return;
         }
-        if (inputs.password.trim().length < 6) {
-            setResponse("Password length must >=6");
+        if (inputs.password.length < 6 || new TextEncoder().encode(inputs.password).length > 72) {
+            setMessage("Password must be at least 6 characters and no more than 72 UTF-8 bytes.");
             return;
         }
         if (inputs.password !== inputs.confirmPassword) {
-            setResponse("Passwords do not match");
+            setMessage("Passwords do not match.");
             return;
         }
 
-        submitButton.current.style.cssText = `
-            display: none;
-        `;
-        const postData = {
-            username: inputs.username,
-            password: inputs.password,
-            confirmPassword: inputs.confirmPassword
-        };
-        axios.post("http://localhost:1198/api/register", postData).then(response => {
-            // console.log(response);
-            setResponse(response.data.message);
-            navigate("/login");
-        }).catch(err => {
-            // console.log(err);
-            setResponse(err.message);
-        }).finally(() => {
-            submitButton.current.style.cssText = `
-                display: block;
-            `;
-        });
-    };
-
-    const handleChange = (event) => {
-        setInputs(prev => ({ ...prev, [event.target.name]: event.target.value }));
-    };
-
-    useEffect(() => {
-        const token = window.localStorage.getItem("token") || "";
-        if (token.length > 0) {
-            return navigate("/dashboard");
+        setSubmitting(true);
+        setMessage("");
+        try {
+            const response = await axios.post("/api/register", { ...inputs, username });
+            if (response.data.success) {
+                navigate("/login", { replace: true, state: { message: "Account created. You can now log in." } });
+            } else {
+                setMessage(response.data.message || "Could not create the account.");
+            }
+        } catch (error) {
+            setMessage(error.response?.data?.message || error.message || "Could not create the account.");
+        } finally {
+            setSubmitting(false);
         }
-    }, []);
+    };
 
     return (
         <div className={styles.container}>
             <form onSubmit={handleSubmit}>
-                <input type="text" name="username" placeholder="Username" onChange={handleChange} value={inputs.username} required />
-
-                <input type="password" name="password" placeholder="Password" onChange={handleChange} value={inputs.password} required />
-
-                <input type="password" name="confirmPassword" placeholder="Confirm Password" onChange={handleChange} value={inputs.confirmPassword} required />
-
-                <div className={styles.response}>{response}</div>
-
-                <input ref={submitButton} type="submit" />
+                <h1>Create account</h1>
+                <label>Username<input autoComplete="username" maxLength={15} name="username" onChange={handleChange} required value={inputs.username} /></label>
+                <label>Password<input autoComplete="new-password" name="password" onChange={handleChange} required type="password" value={inputs.password} /></label>
+                <label>Confirm password<input autoComplete="new-password" name="confirmPassword" onChange={handleChange} required type="password" value={inputs.confirmPassword} /></label>
+                {message && <p className={styles.response} role="alert">{message}</p>}
+                <button disabled={submitting} type="submit">{submitting ? "Creating account…" : "Create account"}</button>
             </form>
         </div>
-    )
-}
+    );
+};
 
-export default Regsiter
+export default Register;

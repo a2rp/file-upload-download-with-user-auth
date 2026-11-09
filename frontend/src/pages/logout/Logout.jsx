@@ -1,25 +1,16 @@
-import React, { useEffect } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom';
+import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Logout = () => {
-    const navigate = useNavigate(null);
+    const navigate = useNavigate();
 
-    const clearToken = () => {
-        const getToken = window.localStorage.getItem("token");
-        if (getToken && getToken.length > 0) {
-            window.localStorage.clear();
-            window.location.reload();
-        }
-    };
     useEffect(() => {
-        clearToken();
-    }, []);
+        window.localStorage.removeItem("token");
+        window.dispatchEvent(new Event("authchange"));
+        navigate("/home", { replace: true });
+    }, [navigate]);
 
-    return (
-        <div style={{ padding: "15px" }}>
-            Logout Successful
-        </div>
-    )
-}
+    return <p role="status" style={{ padding: "15px" }}>You have been logged out.</p>;
+};
 
-export default Logout
+export default Logout;

@@ -1,99 +1,84 @@
-# file-upload-download-with-user-auth
-reactjs, nodejs, mongodb, jsonwebtoken, multer, bcryptjs, cors, express
+# File Upload, Download, and User Authentication
 
-<br /><br />
-run backend
-- download or clone the backend floder
-- create ".env" file in the root and add <br />
-PORT = 1198<br />
-MONGODB_URI = "mongodb://localhost:27017/project4DB"<br />
-JWT_SECRET_KEY = "a2rp"<br />
-- open terminal in the folder
-- type "npm install" and press enter to install all node packages
-- type "npm run dev" to run the backend
+A React and Express application for personal file galleries. Users register, sign in, upload files, and manage only their own uploads. Each uploaded file can be shared with its download page and a separate access code.
 
-run frontend
-- download or clone the frontend folder
-- open terminal in the folder
-- type "npm install" and press enter to install all node packages
-- type "npm run start" to run the frontend
+## Features
 
-<img width="960" alt="Screenshot 2023-09-19 165209" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/7edf18c1-abdd-4747-a804-5b6c2ec3ef0b">
-<img width="960" alt="Screenshot 2023-09-19 165234" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/426a67f0-3792-4a43-9c38-1954da25d484">
-<img width="960" alt="Screenshot 2023-09-19 165301" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/e3f6c64d-2b84-4e66-950f-ca43374c08fe">
-<img width="960" alt="Screenshot 2023-09-19 165335" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/0cefcdc3-8fc5-45bf-83fd-64268495685e">
-<img width="960" alt="Screenshot 2023-09-19 165548" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/cec526db-cd12-4066-9785-84792e6c0b7b">
-<img width="960" alt="Screenshot (948)" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/ea9b156a-8c4b-4458-be7c-9cd06bd0daa1">
-<img width="960" alt="Screenshot (950)" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/2b3b91ec-402f-46d2-906c-38341bd2816f">
-<img width="960" alt="Screenshot (951)" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/edf30f8e-540e-4732-b4c5-6080eeb1f736">
-<img width="960" alt="Screenshot (953)" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/2f9a06ef-f876-4670-8ec9-a8a606c5159c">
-<img width="960" alt="Screenshot (957)" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/d988eddf-90ae-4d9c-994c-d89f18c558ac">
-<img width="960" alt="Screenshot (958)" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/1784f066-ed02-46f6-b589-251cc2ff28f6">
-<img width="960" alt="Screenshot (959)" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/74d9ff97-2a84-4a93-9a74-a00ba3c8bc62">
-<img width="684" alt="Screenshot 2023-09-19 174223" src="https://github.com/a2rp/file-upload-download-with-user-auth/assets/5670738/796ebcaf-a236-4931-9873-80ea9ac4afdc">
+- Account registration with bcrypt password hashing
+- One-day JWT access tokens for authenticated API requests
+- Per-user upload, listing, and deletion
+- JPEG, PNG, and PDF uploads up to 5 MB
+- Random stored filenames and local disk storage
+- Share downloads protected by a per-file 48-character access code
+- MongoDB metadata with legacy file ownership migration on first dashboard load
 
+## Setup
 
+Requires Node.js, npm, and a running MongoDB instance.
 
+### Backend
 
+```sh
+cd backend
+npm install
+```
 
+Copy `.env.example` to `.env` (`cp .env.example .env`). Generate a signing secret with:
 
+```sh
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+```
 
+Put the generated value in `JWT_SECRET_KEY` in `backend/.env`. Set `MONGODB_URI` if MongoDB is not running locally, then start the API:
 
+```sh
+npm run dev
+```
 
+The API listens on `http://localhost:1198` by default.
 
+### Frontend
 
+In another terminal:
 
+```sh
+cd frontend
+npm install
+npm start
+```
 
+The React development server runs on `http://localhost:3000` and proxies API requests to the backend.
 
+## Using the gallery
 
+1. Create an account and log in.
+2. Upload a JPEG, PNG, or PDF file up to 5 MB.
+3. In the dashboard, copy the file's download page and access code.
+4. Send both values to the recipient. The access code grants access to that file only.
 
+File records created by older versions are matched to the signed-in account by username when the dashboard loads. The app then stores the account ID and replaces the old short access code with a new random code.
 
+## API
 
+| Method | Endpoint | Access |
+| --- | --- | --- |
+| `POST` | `/api/register` | Public |
+| `POST` | `/api/login` | Public |
+| `GET` | `/api/user` | Bearer token |
+| `POST` | `/api/file/upload` | Bearer token, multipart field `file` |
+| `GET` | `/api/file/files` | Bearer token; returns the signed-in user's files |
+| `DELETE` | `/api/file/files/:id` | Bearer token; owner only |
+| `POST` | `/api/file/url-download/:id` | Per-file access code in the JSON body |
 
+Authenticated requests use `Authorization: Bearer <token>`. Tokens expire after one day.
 
+## Storage and file checks
 
+Uploads are stored in `backend/api/uploads`; MongoDB stores their metadata. The server checks the declared MIME type, filename extension, and basic JPEG, PNG, or PDF file signature. It does not scan for malware. The access code is a share credential, so share it only with the intended recipient.
 
+## Project layout
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-## Links
-
-- Portfolio: [https://www.ashishranjan.net](https://www.ashishranjan.net)
-- GitHub: [https://github.com/a2rp](https://github.com/a2rp)
-- CodePen: [https://codepen.io/ash1198](https://codepen.io/ash1198)
-- LinkedIn: [https://www.linkedin.com/in/aashishranjan](https://www.linkedin.com/in/aashishranjan)
-- Facebook: [https://www.facebook.com/theash.ashish/](https://www.facebook.com/theash.ashish/)
-- YouTube: [https://www.youtube.com/@ashishranjan-ashz?sub_confirmation=1](https://www.youtube.com/@ashishranjan-ashz?sub_confirmation=1)
-- Email: [ash.ranjan09@gmail.com](mailto:ash.ranjan09@gmail.com)
-
-## Support
-
-- Support: [https://a2rp-donation-page.netlify.app/](https://a2rp-donation-page.netlify.app/)
-- Buy Me A Coffee: [https://buymeacoffee.com/a2rp](https://buymeacoffee.com/a2rp)
-- Patreon: [https://patreon.com/a2rp](https://patreon.com/a2rp)
+```text
+backend/   Express API, MongoDB models, auth and upload middleware
+frontend/  React gallery, registration, login, and share download pages
+```

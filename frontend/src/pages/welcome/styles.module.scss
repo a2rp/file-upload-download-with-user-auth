@@ -1,39 +1,59 @@
-*,
-::before,
-::after {
-    padding: 0;
-    margin: 0;
-    font-size: 12px;
-    font-family: Verdana, Geneva, Tahoma, sans-serif;
+.container {
+    display: grid;
+    min-height: 60vh;
+    place-items: center;
+    padding: 32px 18px;
 }
 
-.container {
-    // border: 1px solid #f00;
+.welcomeCard {
+    width: min(100%, 560px);
+    padding: 32px;
+    border: 1px solid #d7d7d7;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 8%);
 
-    .files {
-        table {
-            width: 100%;
+    h1 {
+        margin-top: 8px;
+        color: #222;
+        font-size: clamp(26px, 5vw, 40px);
+        line-height: 1.15;
+    }
 
-            thead {
-                tr {
-                    th {
-                        background-color: #000;
-                        color: #fff;
-                        padding: 15px;
-                    }
-                }
-            }
-            tbody {
-                tr {
-                    td {
-                        text-align: center;
-                        padding: 15px;
-                    }
-                }
-                tr:nth-child(odd) {
-                    background-color: aliceblue;
-                }
-            }
+    > p:not(.eyebrow) {
+        max-width: 440px;
+        margin-top: 12px;
+        color: #555;
+        font-size: 15px;
+        line-height: 1.6;
+    }
+}
+
+.eyebrow {
+    color: #126f77;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+}
+
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+
+    a {
+        padding: 10px 15px;
+        border: 1px solid #126f77;
+        border-radius: 6px;
+        color: #fff;
+        background: #126f77;
+        font-size: 14px;
+        text-decoration: none;
+
+        &:last-child {
+            color: #126f77;
+            background: #fff;
         }
     }
 }

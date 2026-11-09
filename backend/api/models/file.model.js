@@ -4,6 +4,17 @@ const fileSchema = new mongoose.Schema({
     user: {
         type: String,
         required: true,
+        index: true,
+    },
+    ownerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "user",
+        index: true,
+    },
+    originalName: {
+        type: String,
+        trim: true,
+        maxlength: 255,
     },
     code: {
         type: String,

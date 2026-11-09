@@ -1,142 +1,132 @@
-import axios from 'axios';
-import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom';
+import axios from "axios";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styles from "./styles.module.scss";
-import { v4 as uuid } from 'uuid';
+
+const authConfig = (token) => ({ headers: { Authorization: `Bearer ${token}` } });
 
 const Dashboard = () => {
-    const navigate = useNavigate(null);
-    const [token, setToken] = useState(window.localStorage.getItem("token") || "");
-    const [user, setUser] = useState("");
-
-    useEffect(() => {
-        if (token.length === 0) {
-            return navigate("/login");
-        }
-        // console.log("token", token);
-
-        const bearerToken = {
-            idToken: "Bearer " + token
-        };
-        axios.post("http://localhost:1198/api/user", bearerToken).then(response => {
-            // console.log(response.data);
-            if (response.data.user) {
-                setUser(user => response.data.user.username);
-            }
-        }).catch(error => {
-            // console.log(error);
-            alert(error.message);
-        });
-    }, []);
-
+    const navigate = useNavigate();
+    const [token] = useState(() => window.localStorage.getItem("token") || "");
+    const [user, setUser] = useState(null);
+    const [files, setFiles] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [busy, setBusy] = useState(false);
+    const [message, setMessage] = useState("");
     const fileInputRef = useRef(null);
-    const uploadFile = async (event) => {
-        event.preventDefault();
-        try {
-            const formData = new FormData();
-            const uniqueId = uuid();
-            const smallId = uniqueId.slice(0, 6);
-            formData.append("id", user);
-            formData.append("name", smallId);
-            formData.append("file", fileInputRef.current.files[0]);
-            const res = await axios.post("http://localhost:1198/api/file/upload", formData);
-            console.log(res);
-            if (res.data.response.file) {
-                window.location.reload();
-            }
-        } catch (error) {
-            console.log(error);
-            alert(error.message);
-        }
-    };
 
-    const [files, setFiles] = useState("");
-    const [loading, setLoading] = useState(false);
-    const getFiles = async () => {
-        // console.log(user);
-        setLoading(true);
-        try {
-            const res = await axios.post("http://localhost:1198/api/file/files", { user });
-            // console.log(res.data);
-            setFiles(res.data.files);
-            setLoading(false);
-            // console.log(res.data.files);
-        } catch (error) {
-            // console.log(error);
-            alert(error.message);
-        }
-    };
-
-    useEffect(() => {
-        if (user.length > 0) {
-            getFiles();
-        }
-    }, [user]);
-
-    const deleteFile = async (id, code) => {
-        if (!window.confirm(`Delete file with code: ${code}`)) {
+    const handleRequestError = useCallback((error) => {
+        if (error.response?.status === 401) {
+            window.localStorage.removeItem("token");
+            window.dispatchEvent(new Event("authchange"));
+            navigate("/login", { replace: true });
             return;
         }
+        setMessage(error.response?.data?.message || error.message || "The request failed.");
+    }, [navigate]);
+
+    useEffect(() => {
+        if (!token) {
+            navigate("/login", { replace: true });
+            return undefined;
+        }
+
+        let active = true;
+        const config = authConfig(token);
+        Promise.all([
+            axios.get("/api/user", config),
+            axios.get("/api/file/files", config),
+        ]).then(([userResponse, fileResponse]) => {
+            if (!active) return;
+            setUser(userResponse.data.user);
+            setFiles(fileResponse.data.files);
+        }).catch((error) => {
+            if (active) handleRequestError(error);
+        }).finally(() => {
+            if (active) setLoading(false);
+        });
+
+        return () => { active = false; };
+    }, [token, navigate, handleRequestError]);
+
+    const uploadFile = async (event) => {
+        event.preventDefault();
+        const selectedFile = fileInputRef.current?.files?.[0];
+        if (!selectedFile) {
+            setMessage("Choose a JPEG, PNG, or PDF file first.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", selectedFile);
+        setBusy(true);
+        setMessage("");
+
         try {
-            const response = await axios.post(`http://localhost:1198/api/file/delete/${id}`);
-            // console.log(res);
-            if (response.data.success) {
-                window.location.reload();
-            }
+            const response = await axios.post("/api/file/upload", formData, authConfig(token));
+            setFiles((current) => [response.data.file, ...current]);
+            setMessage("File uploaded. Share the download page and access code with its recipient.");
+            if (fileInputRef.current) fileInputRef.current.value = "";
         } catch (error) {
-            console.error(error);
-            alert(error.message);
+            handleRequestError(error);
+        } finally {
+            setBusy(false);
         }
     };
 
+    const deleteFile = async (file) => {
+        if (!window.confirm(`Delete “${file.originalName}” from your gallery?`)) return;
+
+        setBusy(true);
+        setMessage("");
+        try {
+            await axios.delete(`/api/file/files/${file.id}`, authConfig(token));
+            setFiles((current) => current.filter((item) => item.id !== file.id));
+            setMessage("File deleted.");
+        } catch (error) {
+            handleRequestError(error);
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    if (loading) return <p className={styles.container} role="status">Loading your gallery…</p>;
+    if (!user) return <p className={styles.container} role="alert">{message || "Could not load your gallery."}</p>;
+
     return (
-        <div className={styles.container}>
-            {user.length !== 0
-                ? <div className={styles.userContent}>
-                    Hi {user}
-                    <hr />
+        <section className={styles.container}>
+            <div className={styles.userContent}>
+                <h1>Hi {user.username}</h1>
+                <p>Your files are private to your account. A share code gives access only to its matching file.</p>
 
-                    {/* upload file */}
-                    <div className={styles.uploadFile}>
-                        <input type="file" ref={fileInputRef} />
-                        <input type="button" onClick={uploadFile} className={styles.uploadSubmit} value="UPLOAD" />
-                    </div>
+                <form className={styles.uploadFile} onSubmit={uploadFile}>
+                    <label htmlFor="file-upload">Upload a JPEG, PNG, or PDF (up to 5 MB)</label>
+                    <input accept="image/jpeg,image/png,application/pdf" id="file-upload" ref={fileInputRef} type="file" />
+                    <button className={styles.uploadSubmit} disabled={busy} type="submit">{busy ? "Please wait…" : "Upload file"}</button>
+                </form>
 
-                    {/* see all files */}
-                    <div className={styles.files}>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Unique Code</th>
-                                    <th>File Name</th>
-                                    <th>Actions</th>
+                {message && <p className={styles.message} role="status">{message}</p>}
+
+                <div className={styles.files}>
+                    <table>
+                        <thead>
+                            <tr><th>Access code</th><th>File name</th><th>Download page</th><th>Actions</th></tr>
+                        </thead>
+                        <tbody>
+                            {files.length ? files.map((file) => (
+                                <tr key={file.id}>
+                                    <td><code>{file.code}</code></td>
+                                    <td>{file.originalName}</td>
+                                    <td><a href={`${window.location.origin}/download-file/${file.id}`}>Open share page</a></td>
+                                    <td><button className={styles.delete} disabled={busy} onClick={() => deleteFile(file)} type="button">Delete</button></td>
                                 </tr>
-                            </thead>
-                            <tbody>
-                                {files ?
-                                    files.map((file) => (
-                                        <tr key={file._id}>
-                                            <td>
-                                                <span>{file.code}</span>
-                                            </td>
-                                            <td>
-                                                <span>{file.file.split("api\\uploads\\")}</span>
-                                            </td>
-                                            <td>
-                                                <button className={styles.delete} onClick={() => deleteFile(file._id, file.code)}>
-                                                    Delete File
-                                                </button>
-                                            </td>
-                                        </tr>
-                                    ))
-                                    : <tr><td></td></tr>}
-                            </tbody>
-                        </table>
-                    </div>
+                            )) : <tr><td colSpan="4">No files yet. Upload one above to get started.</td></tr>}
+                        </tbody>
+                    </table>
                 </div>
-                : ""}
-        </div>
-    )
-}
+            </div>
+        </section>
+    );
+};
 
-export default Dashboard
+export default Dashboard;

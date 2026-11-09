@@ -1,47 +1,40 @@
-import { NavLink, Route, Routes } from 'react-router-dom';
-import './App.css';
+import { useEffect, useState } from "react";
+import { NavLink, Route, Routes } from "react-router-dom";
+import "./App.css";
 import styles from "./styles.module.scss";
-
 import { Welcome, Login, Register, Dashboard, Logout } from "./pages";
-import { useEffect, useState } from 'react';
-import DownloadFile from './pages/downloadFile/DownloadFile';
+import DownloadFile from "./pages/downloadFile/DownloadFile";
 
 function App() {
-    const [userLoggedIn, setUserLoggedIn] = useState(false);
+    const [userLoggedIn, setUserLoggedIn] = useState(() => Boolean(window.localStorage.getItem("token")));
+
     useEffect(() => {
-        const token = window.localStorage.getItem("token");
-        if (token && token.length > 0) {
-            setUserLoggedIn(true);
-        } else {
-            setUserLoggedIn(false);
-        }
-    }, [window.localStorage.getItem("token")]);
+        const updateAuthentication = () => setUserLoggedIn(Boolean(window.localStorage.getItem("token")));
+        window.addEventListener("authchange", updateAuthentication);
+        window.addEventListener("storage", updateAuthentication);
+        return () => {
+            window.removeEventListener("authchange", updateAuthentication);
+            window.removeEventListener("storage", updateAuthentication);
+        };
+    }, []);
+
+    const linkStyle = ({ isActive }) => ({ color: isActive ? "aqua" : "#fff" });
 
     return (
         <div className={styles.container}>
-            <div className={styles.headerContainer}>
-                <NavLink to="/home" className={styles.appName} style={({ isActive }) => ({
-                    color: isActive ? "aqua" : '#fff'
-                })}>File Gallery</NavLink>
-                <div className={styles.navLinksContainer}>
-                    {userLoggedIn === false ? <>
-                        <NavLink className={styles.navLink} to="/login" style={({ isActive }) => ({
-                            color: isActive ? "aqua" : '#fff'
-                        })}>LOGIN</NavLink>
-                        <NavLink className={styles.navLink} to="/register" style={({ isActive }) => ({
-                            color: isActive ? "aqua" : '#fff'
-                        })}>REGISTER</NavLink>
+            <header className={styles.headerContainer}>
+                <NavLink to="/home" className={styles.appName} style={linkStyle}>File Gallery</NavLink>
+                <nav className={styles.navLinksContainer} aria-label="Main navigation">
+                    {userLoggedIn ? <>
+                        <NavLink className={styles.navLink} to="/dashboard" style={linkStyle}>DASHBOARD</NavLink>
+                        <NavLink className={styles.navLink} to="/logout" style={linkStyle}>LOG OUT</NavLink>
                     </> : <>
-                        <NavLink className={styles.navLink} to="/dashboard" style={({ isActive }) => ({
-                            color: isActive ? "aqua" : '#fff'
-                        })}>DASHBOARD</NavLink>
-                        <NavLink className={styles.navLink} to="/logout" style={({ isActive }) => ({
-                            color: isActive ? "aqua" : '#fff'
-                        })}>LOG OUT</NavLink>
+                        <NavLink className={styles.navLink} to="/login" style={linkStyle}>LOGIN</NavLink>
+                        <NavLink className={styles.navLink} to="/register" style={linkStyle}>REGISTER</NavLink>
                     </>}
-                </div>
-            </div>
-            <div className={styles.contentContainer}>
+                </nav>
+            </header>
+            <main className={styles.contentContainer}>
                 <Routes>
                     <Route path="/" element={<Welcome />} />
                     <Route path="/home" element={<Welcome />} />
@@ -50,8 +43,9 @@ function App() {
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/logout" element={<Logout />} />
                     <Route path="/download-file/:id" element={<DownloadFile />} />
+                    <Route path="*" element={<Welcome />} />
                 </Routes>
-            </div>
+            </main>
         </div>
     );
 }

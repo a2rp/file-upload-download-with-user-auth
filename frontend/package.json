@@ -1,8 +1,9 @@
 {
-    "name": "front-end",
+    "name": "file-gallery-web",
     "version": "0.1.0",
     "private": true,
-    "proxy": "http://localhost:1198/api",
+    "description": "React frontend for private file uploads and code-protected downloads.",
+    "proxy": "http://localhost:1198",
     "dependencies": {
         "@testing-library/jest-dom": "^5.17.0",
         "@testing-library/react": "^13.4.0",

@@ -5,12 +5,14 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, "Please enter a username"],
         unique: true,
+        trim: true,
         minlength: 3,
         maxlength: 15
     },
     password: {
         type: String,
         required: [true, "Please enter a password"],
+        select: false,
     },
     profileImg: {
         type: String

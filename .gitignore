@@ -1,0 +1,7 @@
+node_modules/
+frontend/build/
+backend/.env
+.env
+*.log
+backend/api/uploads/*
+!backend/api/uploads/.gitkeep

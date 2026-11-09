@@ -1,33 +1,46 @@
+const crypto = require("crypto");
+const fs = require("fs");
+const path = require("path");
 const multer = require("multer");
 
-//configure how the files are stored
+const UPLOAD_DIRECTORY = path.resolve(__dirname, "../uploads");
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+fs.mkdirSync(UPLOAD_DIRECTORY, { recursive: true });
+
 const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        //where to store the file
-        cb(null, "api/uploads");
-    },
-    filename: function (req, file, cb) {
-        // cb(null, new Date().toISOString() + file.originalname);
-        cb(null, Date.now() + file.originalname);
+    destination: (_req, _file, callback) => callback(null, UPLOAD_DIRECTORY),
+    filename: (_req, file, callback) => {
+        const extension = path.extname(file.originalname).toLowerCase();
+        const safeExtension = /^\.[a-z0-9]{1,10}$/.test(extension) ? extension : "";
+        callback(null, `${crypto.randomBytes(16).toString("hex")}${safeExtension}`);
     },
 });
 
-const fileFilter = (req, file, cb) => {
-    //reject a file if it's not a jpg or png
-    if (file.mimetype === "image/jpeg" || file.mimetype === "image/jpg" || file.mimetype === "image/png" || file.mimetype === "application/pdf") {
-        cb(null, true);
-    } else {
-        cb(null, false);
-    }
+const allowedExtensions = {
+    "image/jpeg": new Set([".jpg", ".jpeg"]),
+    "image/png": new Set([".png"]),
+    "application/pdf": new Set([".pdf"]),
 };
 
-const upload = multer({
-    storage: storage,
+const fileFilter = (_req, file, callback) => {
+    const extension = path.extname(file.originalname).toLowerCase();
+    if (!allowedExtensions[file.mimetype]?.has(extension)) {
+        const error = new Error("Upload a JPEG, PNG, or PDF file with a matching extension.");
+        error.statusCode = 400;
+        return callback(error);
+    }
+
+    return callback(null, true);
+};
+
+module.exports = multer({
+    storage,
+    fileFilter,
     limits: {
-        fileSize: 1024 * 1024 * 5,
+        fileSize: MAX_FILE_SIZE,
+        files: 1,
+        fields: 0,
+        parts: 1,
     },
-    fileFilter: fileFilter,
 });
-
-module.exports = upload;
-

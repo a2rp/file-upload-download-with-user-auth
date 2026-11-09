@@ -1,50 +1,63 @@
-import axios from 'axios';
-import React, { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom';
+import axios from "axios";
+import { useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
+
+const getDownloadName = (contentDisposition) => {
+    const encodedName = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1];
+    if (encodedName) {
+        try {
+            return decodeURIComponent(encodedName);
+        } catch {
+            // Fall through to the quoted ASCII filename.
+        }
+    }
+
+    return contentDisposition.match(/filename="?([^";]+)"?/i)?.[1] || "download";
+};
 
 const DownloadFile = () => {
     const { id } = useParams();
-    const [status, setStatus] = useState("");
+    const [status, setStatus] = useState("Enter the access code provided by the file owner.");
+
     useEffect(() => {
-        let code = prompt("Please enter the unique code:", "");
-        if (code == null || code == "") {
-            setStatus("Unique code not found");
+        const code = window.prompt("Enter the file access code:", "");
+        if (!code?.trim()) {
+            setStatus("No access code was entered.");
             return;
         }
 
-        setStatus("Downloading File. Please wait!");;
-        downloadURLFile(id, code);
-    }, []);
+        const download = async () => {
+            setStatus("Preparing your download…");
+            try {
+                const response = await axios.post(
+                    `/api/file/url-download/${encodeURIComponent(id)}`,
+                    { code: code.trim() },
+                    { responseType: "arraybuffer" },
+                );
+                const blob = new Blob([response.data], { type: response.headers["content-type"] || "application/octet-stream" });
+                const objectUrl = window.URL.createObjectURL(blob);
+                const link = document.createElement("a");
+                link.href = objectUrl;
+                link.download = getDownloadName(response.headers["content-disposition"] || "");
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 1000);
+                setStatus("Your download has started.");
+            } catch (error) {
+                setStatus(error.response?.status === 404 ? "That file or access code was not found." : "Could not download the file.");
+            }
+        };
 
-    const navigate = useNavigate();
-    const downloadURLFile = async (id, code) => {
-        try {
-            const response = await axios.get(`http://localhost:1198/api/file/url-download/${id}/${code}`, { responseType: "arraybuffer" });
-            // console.log(response);
-            const blob = new Blob([response.data], { type: response.data.type });
-            // console.log(blob);
-            const link = document.createElement("a");
-            link.href = window.URL.createObjectURL(blob);
-            // link.download = "file.pdf";
-            // console.log(response.headers["content-disposition"]);
-            const fileName = response.headers["content-disposition"].split("filename=")[1];
-            // console.log(fileName);
-            const realFileName = fileName.substring(1, fileName.length - 1);
-            link.download = realFileName;
-            link.click();
-        } catch (error) {
-            // console.log(error);
-            alert(error.message);
-        } finally {
-            return navigate("/home");
-        }
-    };
+        download();
+    }, [id]);
 
     return (
-        <div style={{ padding: "15px" }}>
-            {status}
-        </div>
-    )
-}
+        <section style={{ padding: "24px" }}>
+            <p role="status">{status}</p>
+            <Link to="/home">Back to File Gallery</Link>
+        </section>
+    );
+};
 
-export default DownloadFile
+export default DownloadFile;

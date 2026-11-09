@@ -1,20 +1,51 @@
-### register
+### Register an account
 POST http://localhost:1198/api/register
 Content-Type: application/json
 
 {
-    "username": "ashish1",
-    "password": "123456",
-    "confirmPassword": "123456"
+  "username": "your-username",
+  "password": "your-password",
+  "confirmPassword": "your-password"
 }
 
-###
+### Log in
 POST http://localhost:1198/api/login
 Content-Type: application/json
 
 {
-    "username": "ashish1",
-    "password": "123456"
+  "username": "your-username",
+  "password": "your-password"
 }
 
+### Get the current account
+GET http://localhost:1198/api/user
+Authorization: Bearer YOUR_JWT_TOKEN
 
+### List the current account's files
+GET http://localhost:1198/api/file/files
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### Upload a file
+### Replace the sample path with a local PDF file.
+POST http://localhost:1198/api/file/upload
+Authorization: Bearer YOUR_JWT_TOKEN
+Content-Type: multipart/form-data; boundary=FileBoundary
+
+--FileBoundary
+Content-Disposition: form-data; name="file"; filename="sample.pdf"
+Content-Type: application/pdf
+
+< ./sample-files/sample.pdf
+--FileBoundary--
+
+### Delete one of the current account's files
+DELETE http://localhost:1198/api/file/files/FILE_ID
+Authorization: Bearer YOUR_JWT_TOKEN
+
+### Download a shared file (access code is separate from the JWT)
+POST http://localhost:1198/api/file/url-download/FILE_ID
+Content-Type: application/json
+
+{
+  "code": "FILE_ACCESS_CODE"
+}
