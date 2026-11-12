@@ -1,5 +1,6 @@
 {
     "name": "file-gallery-api",
+    "private": true,
     "version": "1.0.0",
     "description": "Express and MongoDB API for private file galleries and code-protected downloads.",
     "main": "index.js",

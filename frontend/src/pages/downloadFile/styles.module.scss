@@ -1,0 +1,90 @@
+.container {
+    display: grid;
+    min-height: 60vh;
+    place-items: center;
+    padding: 32px 18px;
+}
+
+.card {
+    width: min(100%, 480px);
+    padding: 30px;
+    border: 1px solid #d7d7d7;
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 12px 32px rgb(0 0 0 / 8%);
+
+    h1 {
+        color: #222;
+        font-size: 24px;
+    }
+
+    > p {
+        margin-top: 10px;
+        color: #555;
+        line-height: 1.5;
+    }
+
+    > a {
+        display: inline-block;
+        margin-top: 18px;
+        color: #126f77;
+        text-decoration: underline;
+    }
+}
+
+.form {
+    display: grid;
+    gap: 9px;
+    margin-top: 22px;
+
+    label {
+        color: #333;
+        font-weight: 700;
+    }
+
+    input {
+        min-width: 0;
+        min-height: 42px;
+        padding: 8px 10px;
+        border: 1px solid #9daab5;
+        border-radius: 5px;
+        color: #172532;
+        font: inherit;
+        letter-spacing: 0.04em;
+
+        &:focus-visible {
+            outline: 2px solid #126f77;
+            outline-offset: 2px;
+        }
+    }
+
+    button {
+        min-height: 40px;
+        margin-top: 5px;
+        border: 0;
+        border-radius: 5px;
+        background: #126f77;
+        color: #fff;
+        font: inherit;
+        font-weight: 700;
+        cursor: pointer;
+
+        &:disabled {
+            cursor: wait;
+            opacity: 0.7;
+        }
+    }
+}
+
+.status,
+.error {
+    overflow-wrap: anywhere;
+}
+
+.status {
+    color: #126f77 !important;
+}
+
+.error {
+    color: #a12626 !important;
+}
